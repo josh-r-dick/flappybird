@@ -1,0 +1,51 @@
+# Auto detect text files (.java, .xml, .pas, .sql and anything else detected as text) and perform LF normalization.
+# This means that git will handle line ending normalization, everything is converted to LF (Unix)
+# when checked in and converted to OS specific line endings when checked out (CRLF for Windows).
+
+*.java text=auto
+*.xml text=auto
+*.jrxml text=auto
+*.sql text=auto
+*.txt text=auto
+*.pas text=auto
+*.properties text=auto
+buildfile text=auto
+*.rb text=auto
+*.groovy text=auto
+*.py text=auto
+*.html text=auto
+*.ris text=auto
+ # Allow git to decide what else is text.
+* text=auto
+
+#Files we want to treat as binary.
+autoComplete.xml binary
+*.dll binary
+*.png binary
+*.gif binary
+*.jpg binary
+*.exe binary
+*.TTF binary
+*.TPU binary
+
+# --- This is stuff from the default github .gitattributes file. ---
+# Custom for Visual Studio
+*.cs     diff=csharp
+*.sln    merge=union
+*.csproj merge=union
+*.vbproj merge=union
+*.fsproj merge=union
+*.dbproj merge=union
+
+# Standard to msysgit
+*.doc	 diff=astextplain
+*.DOC	 diff=astextplain
+*.docx diff=astextplain
+*.DOCX diff=astextplain
+*.dot  diff=astextplain
+*.DOT  diff=astextplain
+*.pdf  diff=astextplain
+*.PDF	 diff=astextplain
+*.rtf	 diff=astextplain
+*.RTF	 diff=astextplain
+
