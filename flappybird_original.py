@@ -171,7 +171,7 @@ class Pipe:
 class Pipes:
     """
     Represents a pair of pipes that generate with a random gap between them and move from
-    left to right.
+    right to left.
     """
 
     # Width of a pipe.
@@ -180,7 +180,7 @@ class Pipes:
     # Frames between adding a pipe.
     ADD_INTERVAL = 200
 
-    # Pixel per frame speed at which the pipe moves from left to right.
+    # Pixel per frame speed at which the pipe moves from right to left.
     PIPE_SPEED = 2
 
     # Can only have a maximum number of pipe pieces to allow the bird through and to draw the pipe top on each pipe
