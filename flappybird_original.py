@@ -1,11 +1,9 @@
 
 """
-October 20, 2016:
+November 2, 2016 Update:
 
-    - Added a simple background image.
-    - Can now.
-    - The Bird can crash.
-    - Animated the wings.
+    - Bird now collides with pipes.
+    - Reset now resets bird's position and pipes.
 
 """
 
@@ -39,6 +37,9 @@ game_over = False
 
 
 class Bird:
+    """
+    Represents the Bird flying through the game.
+    """
 
     HEIGHT = WIDTH = 32
     CLIMB_DURATION = 8
@@ -54,6 +55,7 @@ class Bird:
         self.wing_down_image = pygame.image.load("resources/images/bird_wing_down.png")
         self.wing_up = True
         self.image = self.wing_up_image
+        self.surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
 
         self.flap_count = 0
         self.climbingcount = 0
@@ -80,7 +82,6 @@ class Bird:
         # Flap the wings
         self.flap()
 
-
     def flap(self):
         """
         Alternate the wings every FLAP_DURATION count.
@@ -103,18 +104,26 @@ class Bird:
 
         :param gamescreen: The game screen.
         """
-        gamescreen.blit(self.image, (self.x, self.y))
+        self.surface.blit(self.image, (0, 0))
+        gamescreen.blit(self.surface, (self.x, self.y))
 
-    def crashed(self):
+    def crashed(self, p_list):
         """
-        Check if the bird crashed in to the ground.
+        Check if the bird crashed in to the ground or a pipe in the pipes_list
 
         :return: True if the bird crashed in to the ground.
         """
         if self.y >= (SCREENHEIGHT - self.height):
             return True
-        else:
-            return False
+
+        for p in p_list:
+            if p.collide(self):
+                return True
+
+        return False
+
+    def get_rect(self):
+        return self.surface.get_bounding_rect().move(self.x, self.y)
 
 
 class Pipe:
@@ -125,11 +134,11 @@ class Pipe:
     # Flags indicating position and drawing direction.
     TOP = 0
     BOTTOM = 1
-    UP = -1
-    DOWN = 1
 
     # Height of a pipe piece.
     PIECE_HEIGHT = 32
+    # Width of a pipe.
+    WIDTH = 80
 
     # Pipe Images
     BODY_IMAGE = pygame.image.load("resources/images/pipe_body.png")
@@ -137,21 +146,32 @@ class Pipe:
 
     def __init__(self, x, pieces, position):
         self.x = x
+        self.y = 0
         self.position = position
         self.pieces = pieces
         self.startPosition = self.calculates_start_position()
+
+        self.height = Pipe.PIECE_HEIGHT * (self.pieces + 1)
+        self.surface = pygame.Surface((Pipe.WIDTH, self.height), pygame.SRCALPHA)
+
+        # If we're a bottom pipe, draw the end at y=0, otherwise use the calculation.
         if position == Pipe.BOTTOM:
-            self.direction = Pipe.UP;
+            self.end_position = 0;
         else:
-            self.direction = Pipe.DOWN;
+            self.end_position = 1;
 
     def draw(self, gamescreen):
         """
         Draw the Pipe.
         """
-        for i in range(0, self.pieces):
-            gamescreen.blit(Pipe.BODY_IMAGE, (self.x, self.startPosition + self.direction * i * Pipe.PIECE_HEIGHT))
-        gamescreen.blit(Pipe.END_IMAGE, (self.x, self.startPosition + self.direction * self.pieces * Pipe.PIECE_HEIGHT))
+        for i in range(0, self.pieces + 1):
+            self.surface.blit(Pipe.BODY_IMAGE, (0, i * Pipe.PIECE_HEIGHT))
+
+        # Keep track of the pipe's y screen position.
+        self.y = self.position * (SCREENHEIGHT - self.height)
+        self.surface.blit(Pipe.END_IMAGE, (0, self.pieces * Pipe.PIECE_HEIGHT * self.end_position))
+        # Draw the pipe's surface.
+        gamescreen.blit(self.surface, (self.x, self.y))
 
     def calculates_start_position(self):
         """
@@ -167,15 +187,27 @@ class Pipe:
         """
         self.x = x
 
+    def get_rect(self):
+        """
+        Get the screen rectangle around the Pipe.
+        :return: Rectangle with game screen position.
+        """
+        return self.surface.get_bounding_rect().move(self.x, self.y)
+
+    def collide(self, b):
+        """
+        Check if the given bird collides with the pipe's rectangle.
+        :param b: The bird.
+        :return: True if the bird has collided with this pipe.
+        """
+        return self.get_rect().colliderect(b.get_rect())
+
 
 class Pipes:
     """
     Represents a pair of pipes that generate with a random gap between them and move from
     right to left.
     """
-
-    # Width of a pipe.
-    WIDTH = 80
 
     # Frames between adding a pipe.
     ADD_INTERVAL = 200
@@ -218,7 +250,15 @@ class Pipes:
         Is the pipe pair still visible.
         :return: True if the pipes has moved past 0, i.e. off screen
         """
-        return self.x + Pipes.WIDTH > 0
+        return self.x + Pipe.WIDTH > 0
+
+    def collide(self, b):
+        """
+        Check if the bird collided with the pipes.
+        :param b: The bird.
+        :return: True if the bird collided with the top or bottom pipe.
+        """
+        return self.top_pipe.collide(b) or self.bottom_pipe.collide(b)
 
 
 """
@@ -249,6 +289,7 @@ while not done:
         # Reset
         elif event.type == pygame.KEYUP and event.key == pygame.K_r:
             bird.y = SCREENHEIGHT/2
+            pipes_list = []
             paused = False
             game_over = False
 
@@ -283,7 +324,7 @@ while not done:
         screen.blit(game_over_image, (60, 200))
 
     # Draw the game over screen if the bird crashed, and pause the game
-    if bird.crashed():
+    if bird.crashed(pipes_list):
         game_over = True
 
     pygame.display.flip()
