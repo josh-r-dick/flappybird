@@ -5,6 +5,19 @@ A flappy bird clone written for the Code Enrichment program at NMS. It is a work
 Controls:
 * ```space```, ```p``` to pause, ```r``` to reset.
 
+## November 9, 2016
+
+You can score. The score is incremented every time the bird passes a pipe. The pipe x positions are checked against the
+bird's x position to add a point.
+
+Also added movement to the pipes to make the game harder. The pipes move up or down randomly for 0 to 100 frames. This
+makes the game a lot harder right off  the bat.
+
+Things to add:
+- How can we turn on the pipe up/down movemnt after a certain score?
+- Change the backgrounds as time goes on?
+- How to add a good looking start screen and end screen?
+
 ## November 2, 2016
 
 The Bird now crashes in to the pipes. Added rectangles to Bird and Pipes to track their positions on screen, this made

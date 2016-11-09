@@ -1,8 +1,10 @@
-"""
-November 2, 2016 Update:
 
-    - Bird now collides with pipes.
-    - Reset now resets bird's position and pipes.
+"""
+November 9, 2016 Update:
+
+    - Can now score as passing through pipes.
+    - Score is rendered.
+    - Pipes now move up and down randomly.
 
 """
 
@@ -18,8 +20,10 @@ SCREENHEIGHT = 512
 pygame.init()
 screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
 
+# TODO CHANGING BACKGROUND: Add multiple backgrounds here.
 # Background image
 background_image = pygame.image.load("resources/images/background.png")
+
 # Paused image
 paused_image = pygame.image.load("resources/images/paused.png")
 # Game over image.
@@ -58,6 +62,9 @@ class Bird:
 
         self.flap_count = 0
         self.climbingcount = 0
+
+        # TODO the bird has a score.
+        self.score = Score()
 
     def climb(self):
         """
@@ -103,6 +110,7 @@ class Bird:
 
         :param gamescreen: The game screen.
         """
+        self.score.draw(gamescreen)
         self.surface.blit(self.image, (0, 0))
         gamescreen.blit(self.surface, (self.x, self.y))
 
@@ -122,10 +130,28 @@ class Bird:
         return False
 
     def get_rect(self):
+        """
+        Get the bounding rectangle.
 
-        return pygame.Rect()
-        # TODO return the Bird's rectangle, it has to be moved to the bird's on screen x, y position
-        # return self.surface.get_bounding_rect().move(self.x, self.y)
+        :return: The bounding rectangle.
+        """
+        return self.surface.get_bounding_rect().move(self.x, self.y)
+
+    def scored(self, p_list):
+        # TODO Did the bird score?
+        """
+        Has the bird scored on the pipe list.
+
+        :param p_list: List of pipes to check if the bird has passed.
+        :return: True if the bird scored.
+        """
+        for pipes in p_list:
+            if pipes.passed(self) and not pipes.score_counted:
+                pipes.score_counted = True
+                self.score.score()
+                return True
+
+        return False
 
 
 class Pipe:
@@ -146,57 +172,71 @@ class Pipe:
     BODY_IMAGE = pygame.image.load("resources/images/pipe_body.png")
     END_IMAGE = pygame.image.load("resources/images/pipe_end.png")
 
+    # How many extra pieces to draw to accommodate for up/down movement
+    EXTRA_PIECES = 10
+
     def __init__(self, x, pieces, position):
         self.x = x
         self.y = 0
+        # Offset to have the pipes move up and down.
+        self.y_offset = 0
+
         self.position = position
         self.pieces = pieces
+        self.height = Pipe.PIECE_HEIGHT * (self.pieces + 1 + Pipe.EXTRA_PIECES)
         self.startPosition = self.calculates_start_position()
 
-        self.height = Pipe.PIECE_HEIGHT * (self.pieces + 1)
         self.surface = pygame.Surface((Pipe.WIDTH, self.height), pygame.SRCALPHA)
 
         # If we're a bottom pipe, draw the end at y=0, otherwise use the calculation.
         if position == Pipe.BOTTOM:
-            self.end_position = 0;
+            self.end_position = 0
         else:
-            self.end_position = 1;
+            self.end_position = 1
 
     def draw(self, gamescreen):
         """
         Draw the Pipe.
         """
-        for i in range(0, self.pieces + 1):
+        for i in range(0, self.pieces + Pipe.EXTRA_PIECES):
             self.surface.blit(Pipe.BODY_IMAGE, (0, i * Pipe.PIECE_HEIGHT))
 
         # Keep track of the pipe's y screen position.
-        self.y = self.position * (SCREENHEIGHT - self.height)
-        self.surface.blit(Pipe.END_IMAGE, (0, self.pieces * Pipe.PIECE_HEIGHT * self.end_position))
+        self.y = self.startPosition + self.y_offset
+        self.surface.blit(Pipe.END_IMAGE, (0, i * Pipe.PIECE_HEIGHT * self.end_position))
         # Draw the pipe's surface.
         gamescreen.blit(self.surface, (self.x, self.y))
 
     def calculates_start_position(self):
         """
-        Calculate the pipe draw start position based on whether or not it's a top pipe or a bottom pipe.
-        :return:  0 if this is a top pipe, or (SCREENHEIGHT - Pipe.PIECE_HEIGHT) to start drawing from
-        """
-        return (SCREENHEIGHT - Pipe.PIECE_HEIGHT) * self.position
+        Calculate the pipe draw start position based on whether or not it's a top pipe or a bottom pipe adding
+        extra pieces offsecreen so it draws during movement.
 
-    def update(self, x):
+        :return:  0 + extra if this is a top pipe, or (SCREENHEIGHT - self.height) + extra to start drawing from the bottom
+        """
+        start_pos = (SCREENHEIGHT - self.height) * self.position
+        if self.position == Pipe.TOP:
+            start_pos -= Pipe.PIECE_HEIGHT * Pipe.EXTRA_PIECES
+        else:
+            start_pos += Pipe.PIECE_HEIGHT * Pipe.EXTRA_PIECES
+
+        return start_pos
+
+    # TODO Update the y postion with an offset.
+    def update(self, x, y_offset):
         """
         Update the pipe.
         :param x: New X value.
         """
         self.x = x
+        self.y_offset = y_offset
 
     def get_rect(self):
         """
         Get the screen rectangle around the Pipe.
         :return: Rectangle with game screen position.
         """
-        return pygame.Rect
-        # TODO Get this pipe's rectangle, it has to be moved to it's on screen x, y position
-        # return self.surface.get_bounding_rect().move(self.x, self.y)
+        return self.surface.get_bounding_rect().move(self.x, self.y)
 
     def collide(self, b):
         """
@@ -204,9 +244,7 @@ class Pipe:
         :param b: The bird.
         :return: True if the bird has collided with this pipe.
         """
-        return False
-        # TODO Check if the bird collided with this pipe.
-        # return self.get_rect().colliderect(b.get_rect())
+        return self.get_rect().colliderect(b.get_rect())
 
 
 class Pipes:
@@ -224,8 +262,18 @@ class Pipes:
     # Can only have a maximum number of pipe pieces to allow the bird through and to draw the pipe top on each pipe
     MAX_PIPE_PIECES = (SCREENHEIGHT - 3 * Bird.HEIGHT - 3 * Pipe.PIECE_HEIGHT) / Pipe.PIECE_HEIGHT
 
+    # TODO Bounds on up/down movement
+    # Min and max number of frames the pipes can move up or down.
+    MIN_PIPE_Y_MOVEMENT = 0
+    MAX_PIPE_Y_MOVEMENT = 50
+    MOVE_UP = 0
+    MOVE_DOWN = 1
+
     def __init__(self, gamescreen):
+
+        self.score_counted = False
         self.x = SCREENWIDTH
+        self.y = 0
 
         # Randomly generate the number of pipes for the top.
         self.top_pieces = randint(1, Pipes.MAX_PIPE_PIECES)
@@ -234,6 +282,11 @@ class Pipes:
         # Create the pipes.
         self.top_pipe = Pipe(self.x, self.top_pieces, Pipe.TOP)
         self.bottom_pipe = Pipe(self.x, self.bottom_pieces, Pipe.BOTTOM)
+
+        # TODO up/down movemnt control
+        self.y_movement_duration = randint(Pipes.MIN_PIPE_Y_MOVEMENT, Pipes.MAX_PIPE_Y_MOVEMENT)
+        self.y_movement_direction = randint(Pipes.MOVE_UP, Pipes.MOVE_DOWN)
+        self.y_movement_count = 0
 
     def draw(self, gamescreen):
         """
@@ -247,9 +300,23 @@ class Pipes:
         """
         Update the pipes.
         """
+        # TODO Change the up/down movemnt accordingly
+        # If we are still moving, move up or down accordingly
+        if self.y_movement_count < self.y_movement_duration:
+            self.y_movement_count += 1
+            if self.y_movement_direction == Pipes.MOVE_DOWN:
+                self.y += 1
+            elif self.y_movement_direction == Pipes.MOVE_UP:
+                self.y -= 1
+        # Otherwise reset the movement for the next time around
+        else:
+            self.y_movement_duration = randint(Pipes.MIN_PIPE_Y_MOVEMENT, Pipes.MAX_PIPE_Y_MOVEMENT)
+            self.y_movement_direction = randint(Pipes.MOVE_UP, Pipes.MOVE_DOWN)
+            self.y_movement_count = 0
+
         self.x -= 1
-        self.top_pipe.update(self.x)
-        self.bottom_pipe.update(self.x)
+        self.top_pipe.update(self.x, self.y)
+        self.bottom_pipe.update(self.x, self.y)
 
     def is_visible(self):
         """
@@ -264,23 +331,92 @@ class Pipes:
         :param b: The bird.
         :return: True if the bird collided with the top or bottom pipe.
         """
-        return False
-        # TODO check here if the bird collides with either pipe
-        # return self.top_pipe.collide(b) or self.bottom_pipe.collide(b)
+        return self.top_pipe.collide(b) or self.bottom_pipe.collide(b)
 
+    def passed(self, bird):
+        if self.x + Pipe.WIDTH < bird.x:
+            return True
+        else:
+            return False
+
+
+class Score:
+    # TODO The score. Also keeps track of images and renders it.
+    """
+    Maintains and renders the score.
+    """
+
+    # The number images.
+    NUMBERS = (
+        pygame.image.load('resources/images/numbers/0.png').convert_alpha(),
+        pygame.image.load('resources/images/numbers/1.png').convert_alpha(),
+        pygame.image.load('resources/images/numbers/2.png').convert_alpha(),
+        pygame.image.load('resources/images/numbers/3.png').convert_alpha(),
+        pygame.image.load('resources/images/numbers/4.png').convert_alpha(),
+        pygame.image.load('resources/images/numbers/5.png').convert_alpha(),
+        pygame.image.load('resources/images/numbers/6.png').convert_alpha(),
+        pygame.image.load('resources/images/numbers/7.png').convert_alpha(),
+        pygame.image.load('resources/images/numbers/8.png').convert_alpha(),
+        pygame.image.load('resources/images/numbers/9.png').convert_alpha()
+    )
+
+    # The width of a number, plus some padding.
+    NUMBER_WIDTH = 24 + 1
+    # Number height
+    NUMBER_HEIGHT = 36
+    # Total number of digits.
+    DIGITS = 3
+
+    def __init__(self):
+        # Area to render the score on.
+        self.surface = pygame.Surface((Score.DIGITS * Score.NUMBER_WIDTH, Score.NUMBER_HEIGHT), pygame.SRCALPHA)
+        # The score.
+        self.score_count = 0
+
+    def draw(self, gamescreen):
+        """
+        Draw the current score on the game screen.
+
+        :param gamescreen: The game screen to draw on.
+        """
+        score_string = str(self.score_count)
+        self.surface.fill(0)
+
+        # Draw each digit.
+        digit_count = 0
+        for d in score_string:
+            self.surface.blit(Score.NUMBERS[int(d)], (digit_count * Score.NUMBER_WIDTH, 0))
+            digit_count += 1
+
+        gamescreen.blit(self.surface, (SCREENWIDTH - self.surface.get_width(), 5))
+
+    def score(self):
+        """
+        Increment the score.
+
+        :return: The updated score.
+        """
+        self.score_count += 1
+        return self.score_count
 
 """
 Game Control
 
 """
 # Create a bird
-bird = Bird(SCREENWIDTH / 2, SCREENHEIGHT / 2)
+bird = Bird(SCREENWIDTH/2, SCREENHEIGHT/2)
 # List of pipes
 pipes_list = [Pipes(screen)]
 # Keep track of how often to add pipes.
 pipe_counter = 0
 
-# Game loop
+score = 0
+
+# TODO CHANGING BACKGROUND: Add a game counter to keep track of how long we've been playing
+
+"""
+The game loop.
+"""
 while not done:
 
     # Check for game events.
@@ -296,21 +432,23 @@ while not done:
             paused = not paused
         # Reset
         elif event.type == pygame.KEYUP and event.key == pygame.K_r:
-            bird.y = SCREENHEIGHT / 2
-            # TODO clear the pipes list too
-            # pipes_list = []
+            bird.y = SCREENHEIGHT/2
+            pipes_list = []
             paused = False
             game_over = False
 
     # Tick the clock, clear the screen and draw everything.
     clock.tick(FPS)
     screen.fill(0)
+    # TODO CHANGING BACKGROUND: Depending on how long we've been playing blit a different background.
     screen.blit(background_image, (0, 0))
-    bird.draw(screen)
 
     # Draw all the pipes
     for p in pipes_list:
         p.draw(screen)
+
+    # Bird and score on top.
+    bird.draw(screen)
 
     # Update the bird and pipes if the game is not paused and not game over
     if not paused and not game_over:
@@ -327,12 +465,17 @@ while not done:
         if pipe_counter > Pipes.ADD_INTERVAL:
             pipes_list.append(Pipes(screen))
             pipe_counter = 0
+
+        # TODO Update the score!
+        # Update the score.
+        bird.scored(pipes_list)
+
     elif paused:
         screen.blit(paused_image, (60, 200))
+
     elif game_over:
         screen.blit(game_over_image, (60, 200))
 
-    # Draw the game over screen if the bird crashed, and pause the game
     if bird.crashed(pipes_list):
         game_over = True
 
