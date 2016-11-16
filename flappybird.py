@@ -1,10 +1,8 @@
-
 """
-November 9, 2016 Update:
+November 16, 2016 Update:
 
-    - Can now score as passing through pipes.
-    - Score is rendered.
-    - Pipes now move up and down randomly.
+    - Pipes start moving after the bird has progressed further in to the game.
+    - Backgrounds change based on how long the game has been played.
 
 """
 
@@ -20,10 +18,8 @@ SCREENHEIGHT = 512
 pygame.init()
 screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
 
-# TODO CHANGING BACKGROUND: Add multiple backgrounds here.
 # Background image
 background_image = pygame.image.load("resources/images/background.png")
-
 # Paused image
 paused_image = pygame.image.load("resources/images/paused.png")
 # Game over image.
@@ -63,7 +59,6 @@ class Bird:
         self.flap_count = 0
         self.climbingcount = 0
 
-        # TODO the bird has a score.
         self.score = Score()
 
     def climb(self):
@@ -138,7 +133,6 @@ class Bird:
         return self.surface.get_bounding_rect().move(self.x, self.y)
 
     def scored(self, p_list):
-        # TODO Did the bird score?
         """
         Has the bird scored on the pipe list.
 
@@ -152,6 +146,10 @@ class Bird:
                 return True
 
         return False
+
+    def reset(self):
+        self.y = SCREENHEIGHT / 2
+        self.score.score_count = 0
 
 
 class Pipe:
@@ -209,11 +207,10 @@ class Pipe:
 
     def calculates_start_position(self):
         """
-        Calculate the pipe draw start position based on whether or not it's a top pipe or a bottom pipe adding
-        extra pieces offsecreen so it draws during movement.
-
-        :return:  0 + extra if this is a top pipe, or (SCREENHEIGHT - self.height) + extra to start drawing from the bottom
+        Calculate the pipe draw start position based on whether or not it's a top pipe or a bottom pipe.
+        :return:  0 if this is a top pipe, or (SCREENHEIGHT - Pipe.PIECE_HEIGHT) to start drawing from
         """
+        # start_pos = (SCREENHEIGHT - Pipe.PIECE_HEIGHT) * self.position
         start_pos = (SCREENHEIGHT - self.height) * self.position
         if self.position == Pipe.TOP:
             start_pos -= Pipe.PIECE_HEIGHT * Pipe.EXTRA_PIECES
@@ -222,7 +219,6 @@ class Pipe:
 
         return start_pos
 
-    # TODO Update the y postion with an offset.
     def update(self, x, y_offset):
         """
         Update the pipe.
@@ -262,15 +258,23 @@ class Pipes:
     # Can only have a maximum number of pipe pieces to allow the bird through and to draw the pipe top on each pipe
     MAX_PIPE_PIECES = (SCREENHEIGHT - 3 * Bird.HEIGHT - 3 * Pipe.PIECE_HEIGHT) / Pipe.PIECE_HEIGHT
 
-    # TODO Bounds on up/down movement
     # Min and max number of frames the pipes can move up or down.
     MIN_PIPE_Y_MOVEMENT = 0
     MAX_PIPE_Y_MOVEMENT = 50
     MOVE_UP = 0
     MOVE_DOWN = 1
 
-    def __init__(self, gamescreen):
+    # TODO Tells the game how many pipes to pass before they start moving.
+    # Start moving in the Y direction after this many pipes
+    START_MOVING_Y_COUNT = 2
 
+    def __init__(self, gamescreen, number_of_pipes):
+        """
+        Initialize the pipes.
+
+        :param gamescreen: The game screen.
+        :param number_of_pipes: The number of this pipe.
+        """
         self.score_counted = False
         self.x = SCREENWIDTH
         self.y = 0
@@ -283,10 +287,11 @@ class Pipes:
         self.top_pipe = Pipe(self.x, self.top_pieces, Pipe.TOP)
         self.bottom_pipe = Pipe(self.x, self.bottom_pieces, Pipe.BOTTOM)
 
-        # TODO up/down movemnt control
         self.y_movement_duration = randint(Pipes.MIN_PIPE_Y_MOVEMENT, Pipes.MAX_PIPE_Y_MOVEMENT)
         self.y_movement_direction = randint(Pipes.MOVE_UP, Pipes.MOVE_DOWN)
         self.y_movement_count = 0
+        # This is the next pipe.
+        self.number = number_of_pipes + 1
 
     def draw(self, gamescreen):
         """
@@ -300,9 +305,12 @@ class Pipes:
         """
         Update the pipes.
         """
-        # TODO Change the up/down movemnt accordingly
+
         # If we are still moving, move up or down accordingly
-        if self.y_movement_count < self.y_movement_duration:
+        # TODO Start moving the pipes up and down after a certain number of pipes have passed.
+        if self.number < Pipes.START_MOVING_Y_COUNT:
+            self.y = 0
+        elif self.y_movement_count < self.y_movement_duration:
             self.y_movement_count += 1
             if self.y_movement_direction == Pipes.MOVE_DOWN:
                 self.y += 1
@@ -341,7 +349,6 @@ class Pipes:
 
 
 class Score:
-    # TODO The score. Also keeps track of images and renders it.
     """
     Maintains and renders the score.
     """
@@ -399,20 +406,93 @@ class Score:
         self.score_count += 1
         return self.score_count
 
+
+# TODO The backgrounds
+class Background:
+    """
+    Keeps track of the background image and switches them accordingly.
+    """
+
+    # TODO Counts to handle how long days and transitions are.
+    # Length of  a day or night in frames
+    DAY_NIGHT_LENGTH = 120
+
+    # Dawn/dusk transition frames, for a smooth transition this should be a multiple of 255 (or close to it)
+    # for a smooth transition.
+    TRANSITION_TIME = 51
+
+    def __init__(self):
+
+        self.day_background = pygame.image.load("resources/images/background.png").convert()
+        self.night_background = pygame.image.load("resources/images/night_background.png").convert()
+
+        # TODO Counters to keep track of where we are during the day.
+        self.count = 0
+        self.day = True
+        self.day_alpha = 255
+        self.night_alpha = 0
+
+    def update(self):
+        """
+        Update the background.
+        """
+        # TODO Handle the transition between night and day. If you want a dawn/dusk screen the transiton would have to happen 4 times a day.
+        # transition form day to night, or vice versa.
+        if self.count == Background.DAY_NIGHT_LENGTH:
+            self.day = not self.day
+            self.count = 0
+        # Else check for if we are in a transition
+        else:
+            # If we are in a transition smoothly change the alpha accordingly.
+            if (Background.DAY_NIGHT_LENGTH - Background.TRANSITION_TIME) <= self.count <= Background.DAY_NIGHT_LENGTH:
+                if self.day:
+                    self.day_alpha -= 255 / Background.TRANSITION_TIME
+                    self.night_alpha = 255
+                else:
+                    self.night_alpha -= 255 / Background.TRANSITION_TIME
+                    self.day_alpha = 255
+
+        # Increment the time and update the alphas accordingly.
+        self.count += 1
+        self.day_background.set_alpha(self.day_alpha)
+        self.night_background.set_alpha(self.night_alpha)
+
+    def draw(self, gamescreen):
+        """
+        Draw the backgrounds on the gamescreen.
+
+        If it is during the day, draw the day on top, then during transition it will fade out. The opposite happens
+        at night.
+        :param gamescreen:
+        """
+        # TODO Draw night or day background accordingly.
+        if self.day:
+            gamescreen.blit(self.night_background, (0, 0))
+            gamescreen.blit(self.day_background, (0, 0))
+        else:
+            gamescreen.blit(self.day_background, (0, 0))
+            gamescreen.blit(self.night_background, (0, 0))
+
+
 """
 Game Control
 
 """
 # Create a bird
-bird = Bird(SCREENWIDTH/2, SCREENHEIGHT/2)
-# List of pipes
-pipes_list = [Pipes(screen)]
+bird = Bird(SCREENWIDTH / 2, SCREENHEIGHT / 2)
+
+background = Background()
+
 # Keep track of how often to add pipes.
 pipe_counter = 0
 
-score = 0
+# List of pipes
+number_of_pipes = 0
+pipes_list = [Pipes(screen, number_of_pipes)]
 
-# TODO CHANGING BACKGROUND: Add a game counter to keep track of how long we've been playing
+game_counter = 0
+
+score = 0
 
 """
 The game loop.
@@ -432,16 +512,17 @@ while not done:
             paused = not paused
         # Reset
         elif event.type == pygame.KEYUP and event.key == pygame.K_r:
-            bird.y = SCREENHEIGHT/2
-            pipes_list = []
+            bird.reset()
+            pipe_counter = 0
+            number_of_pipes = 0
+            pipes_list = [Pipes(screen, number_of_pipes)]
             paused = False
             game_over = False
 
     # Tick the clock, clear the screen and draw everything.
     clock.tick(FPS)
     screen.fill(0)
-    # TODO CHANGING BACKGROUND: Depending on how long we've been playing blit a different background.
-    screen.blit(background_image, (0, 0))
+    background.draw(screen)
 
     # Draw all the pipes
     for p in pipes_list:
@@ -453,6 +534,7 @@ while not done:
     # Update the bird and pipes if the game is not paused and not game over
     if not paused and not game_over:
         bird.update()
+        background.update()
 
         # Update each pipe, removing ones that are no longer visible.
         for p in pipes_list:
@@ -463,10 +545,10 @@ while not done:
         # Increment the pipe counter and add one if it is time to.
         pipe_counter += 1
         if pipe_counter > Pipes.ADD_INTERVAL:
-            pipes_list.append(Pipes(screen))
+            pipes_list.append(Pipes(screen, number_of_pipes))
+            number_of_pipes += 1
             pipe_counter = 0
 
-        # TODO Update the score!
         # Update the score.
         bird.scored(pipes_list)
 
@@ -480,4 +562,6 @@ while not done:
         game_over = True
 
     pygame.display.flip()
+
+    game_counter += 1
 

@@ -5,6 +5,16 @@ A flappy bird clone written for the Code Enrichment program at NMS. It is a work
 Controls:
 * ```space```, ```p``` to pause, ```r``` to reset.
 
+## November 16, 2016
+
+Pipes now start moving up and down after a certain point in the game. Default is 2 pipes, but that can be changed.
+
+Also added transition between day and night backgrounds.
+
+Things to add:
+- Some good looking start, end and pause screens.
+- Bird death animation.
+
 ## November 9, 2016
 
 You can score. The score is incremented every time the bird passes a pipe. The pipe x positions are checked against the
