@@ -3,7 +3,15 @@
 A flappy bird clone written for the Code Enrichment program at NMS. It is a work in progress.
 
 Controls:
-* ```space```, ```p``` to pause, ```r``` to reset.
+* ```space```, ```p``` to pause, ```r``` to reset, ```z``` to fire!
+
+## November 23, 2016
+
+Added Enemies and fireballs to shoot them with. Now has a simple start screen too.
+
+Things to add:
+- Enemies that move in more than along the x axis at a fixed speed.
+- Alternate between pipes and enemies.
 
 ## November 16, 2016
 

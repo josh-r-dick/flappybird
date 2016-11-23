@@ -1,13 +1,16 @@
-"""
-November 16, 2016 Update:
 
-    - Pipes start moving after the bird has progressed further in to the game.
-    - Backgrounds change based on how long the game has been played.
+"""
+November 23, 2016 Update:
+
+    - Added a simple start screen.
+    - Added enemies and fireballs to shoot at them.
 
 """
 
 import pygame
 from random import randint
+
+from Enemies import Enemy, Enemies
 
 # Static game variables.
 FPS = 30
@@ -24,15 +27,12 @@ background_image = pygame.image.load("resources/images/background.png")
 paused_image = pygame.image.load("resources/images/paused.png")
 # Game over image.
 game_over_image = pygame.image.load("resources/images/game_over.png")
+# Get Ready Image
+get_ready_image = pygame.image.load("resources/images/get_ready.png")
 
 # Clock to control the frame rate
 clock = pygame.time.Clock()
 
-# Game loop flag
-done = False
-# Tracking pause and game over
-paused = False
-game_over = False
 
 
 class Bird:
@@ -60,6 +60,7 @@ class Bird:
         self.climbingcount = 0
 
         self.score = Score()
+        self.fireballs = []
 
     def climb(self):
         """
@@ -82,6 +83,13 @@ class Bird:
 
         # Flap the wings
         self.flap()
+
+        for f in self.fireballs:
+            f.update()
+
+        for f in self.fireballs:
+            if not f.is_visible():
+                self.fireballs.remove(f)
 
     def flap(self):
         """
@@ -108,8 +116,10 @@ class Bird:
         self.score.draw(gamescreen)
         self.surface.blit(self.image, (0, 0))
         gamescreen.blit(self.surface, (self.x, self.y))
+        for f in self.fireballs:
+            f.draw(gamescreen)
 
-    def crashed(self, p_list):
+    def crashed(self, p_list, enemies):
         """
         Check if the bird crashed in to the ground or a pipe in the pipes_list
 
@@ -122,7 +132,7 @@ class Bird:
             if p.collide(self):
                 return True
 
-        return False
+        return enemies.collide(self.get_rect())
 
     def get_rect(self):
         """
@@ -150,6 +160,26 @@ class Bird:
     def reset(self):
         self.y = SCREENHEIGHT / 2
         self.score.score_count = 0
+        self.fireballs = []
+
+    def fire(self):
+        """
+        Launch a fireball.
+        """
+        self.fireballs.append(Fireball(self.x, self.y))
+
+    def killed_enemy(self, enemies):
+        """
+        Have we killed an enemy yet?
+        :param enemies: Enemies to check.
+        :return: True if an enemy has been killed, false otherwise.
+        """
+        killed = False;
+        for f in self.fireballs:
+            if enemies.killed(f.get_rect()):
+                killed = True
+                self.fireballs.remove(f)
+        return killed
 
 
 class Pipe:
@@ -264,7 +294,6 @@ class Pipes:
     MOVE_UP = 0
     MOVE_DOWN = 1
 
-    # TODO Tells the game how many pipes to pass before they start moving.
     # Start moving in the Y direction after this many pipes
     START_MOVING_Y_COUNT = 2
 
@@ -307,7 +336,6 @@ class Pipes:
         """
 
         # If we are still moving, move up or down accordingly
-        # TODO Start moving the pipes up and down after a certain number of pipes have passed.
         if self.number < Pipes.START_MOVING_Y_COUNT:
             self.y = 0
         elif self.y_movement_count < self.y_movement_duration:
@@ -407,13 +435,11 @@ class Score:
         return self.score_count
 
 
-# TODO The backgrounds
 class Background:
     """
     Keeps track of the background image and switches them accordingly.
     """
 
-    # TODO Counts to handle how long days and transitions are.
     # Length of  a day or night in frames
     DAY_NIGHT_LENGTH = 120
 
@@ -426,7 +452,6 @@ class Background:
         self.day_background = pygame.image.load("resources/images/background.png").convert()
         self.night_background = pygame.image.load("resources/images/night_background.png").convert()
 
-        # TODO Counters to keep track of where we are during the day.
         self.count = 0
         self.day = True
         self.day_alpha = 255
@@ -436,7 +461,6 @@ class Background:
         """
         Update the background.
         """
-        # TODO Handle the transition between night and day. If you want a dawn/dusk screen the transiton would have to happen 4 times a day.
         # transition form day to night, or vice versa.
         if self.count == Background.DAY_NIGHT_LENGTH:
             self.day = not self.day
@@ -465,7 +489,6 @@ class Background:
         at night.
         :param gamescreen:
         """
-        # TODO Draw night or day background accordingly.
         if self.day:
             gamescreen.blit(self.night_background, (0, 0))
             gamescreen.blit(self.day_background, (0, 0))
@@ -474,12 +497,47 @@ class Background:
             gamescreen.blit(self.night_background, (0, 0))
 
 
+class Fireball:
+    """
+    A Fireball the bird can launch.
+    """
+    FIREBALL_IMAGE = pygame.image.load("resources/images/fireball.png")
+    WIDTH = 50
+    HEIGHT = 15
+
+    def __init__(self, start_x, start_y):
+        self.x = start_x + 16
+        self.y = start_y
+        self.surface = pygame.Surface((Fireball.WIDTH, Fireball.HEIGHT), pygame.SRCALPHA)
+
+    def update(self):
+        self.x += 5
+
+    def draw(self, gamescreen):
+        self.surface.blit(Fireball.FIREBALL_IMAGE, (0, 0))
+        gamescreen.blit(self.surface, (self.x, self.y))
+
+    def is_visible(self):
+        """
+        Is the pipe pair still visible.
+        :return: True if the pipes has moved past 0, i.e. off screen
+        """
+        return self.x < SCREENWIDTH
+
+    def get_rect(self):
+        """
+        Get the screen rectangle around the fireball.
+        :return: Rectangle with game screen position.
+        """
+        return self.surface.get_bounding_rect().move(self.x, self.y)
+
+
 """
 Game Control
 
 """
 # Create a bird
-bird = Bird(SCREENWIDTH / 2, SCREENHEIGHT / 2)
+bird = Bird(SCREENWIDTH/2, SCREENHEIGHT/2)
 
 background = Background()
 
@@ -490,10 +548,19 @@ pipe_counter = 0
 number_of_pipes = 0
 pipes_list = [Pipes(screen, number_of_pipes)]
 
+# The enemies.
+enemies = Enemies(screen)
+
 game_counter = 0
 
 score = 0
 
+# Game loop flag
+done = False
+# Tracking pause and game over
+paused = False
+game_over = False
+started = False
 """
 The game loop.
 """
@@ -506,10 +573,13 @@ while not done:
             done = True
         # Fly
         elif event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
+            started = True
             bird.climb()
         # Pause
         elif event.type == pygame.KEYUP and event.key == pygame.K_p:
             paused = not paused
+        elif event.type == pygame.KEYUP and event.key == pygame.K_z:
+            bird.fire()
         # Reset
         elif event.type == pygame.KEYUP and event.key == pygame.K_r:
             bird.reset()
@@ -518,6 +588,7 @@ while not done:
             pipes_list = [Pipes(screen, number_of_pipes)]
             paused = False
             game_over = False
+            enemies.reset()
 
     # Tick the clock, clear the screen and draw everything.
     clock.tick(FPS)
@@ -530,11 +601,18 @@ while not done:
 
     # Bird and score on top.
     bird.draw(screen)
+    enemies.draw()
 
     # Update the bird and pipes if the game is not paused and not game over
-    if not paused and not game_over:
+    if not started:
+        screen.blit(get_ready_image, (20, 100))
+        bird.flap()
+    elif not paused and not game_over:
+
         bird.update()
+        enemies.update()
         background.update()
+        bird.killed_enemy(enemies)
 
         # Update each pipe, removing ones that are no longer visible.
         for p in pipes_list:
@@ -558,7 +636,7 @@ while not done:
     elif game_over:
         screen.blit(game_over_image, (60, 200))
 
-    if bird.crashed(pipes_list):
+    if bird.crashed(pipes_list, enemies):
         game_over = True
 
     pygame.display.flip()
