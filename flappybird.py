@@ -20,6 +20,7 @@ SCREENHEIGHT = 512
 # Initialize the game.
 pygame.init()
 screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
+pygame.mouse.set_visible(False)
 
 # Background image
 background_image = pygame.image.load("resources/images/background.png")
@@ -570,6 +571,9 @@ while not done:
     for event in pygame.event.get():
 
         if event.type == pygame.QUIT:
+            done = True
+        # Quit
+        elif event.type == pygame.KEYUP and event.key == pygame.K_q:
             done = True
         # Fly
         elif event.type == pygame.KEYUP and event.key == pygame.K_SPACE:

@@ -3,7 +3,15 @@
 A flappy bird clone written for the Code Enrichment program at NMS. It is a work in progress.
 
 Controls:
-* ```space```, ```p``` to pause, ```r``` to reset, ```z``` to fire!
+* ```space```, ```p``` to pause, ```r``` to reset, ```q``` to quit, ```z``` to fire!
+
+## December 7, 2016
+
+Added ```q``` to quit the game and got it running on RetroPie.
+
+To do:
+- Improve performance, it runs really slow on the Raspberry Pi when the ghosts and fireballs come on screen.
+- Change the resolution so it fills the gaming table's monitor.
 
 ## November 23, 2016
 
