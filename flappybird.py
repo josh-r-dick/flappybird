@@ -8,6 +8,7 @@ November 23, 2016 Update:
 """
 
 import pygame
+from pygame.locals import *
 from random import randint
 
 from Enemies import Enemy, Enemies
@@ -17,9 +18,15 @@ FPS = 30
 SCREENWIDTH = 284
 SCREENHEIGHT = 512
 
+
 # Initialize the game.
 pygame.init()
-screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
+
+# Only allow certain events.
+pygame.event.set_allowed([QUIT, KEYDOWN, KEYUP])
+
+flags = DOUBLEBUF
+screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT), flags)
 pygame.mouse.set_visible(False)
 
 # Background image
@@ -33,7 +40,6 @@ get_ready_image = pygame.image.load("resources/images/get_ready.png")
 
 # Clock to control the frame rate
 clock = pygame.time.Clock()
-
 
 
 class Bird:
@@ -562,6 +568,10 @@ done = False
 paused = False
 game_over = False
 started = False
+
+background.draw(screen)
+pygame.display.flip()
+
 """
 The game loop.
 """
@@ -642,6 +652,8 @@ while not done:
 
     if bird.crashed(pipes_list, enemies):
         game_over = True
+
+
 
     pygame.display.flip()
 
