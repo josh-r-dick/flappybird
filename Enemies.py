@@ -10,7 +10,7 @@ class Enemy:
     """
     Represents a single enemy.
     """
-    IMAGE = pygame.image.load("resources/images/ghost.png")
+    IMAGE = pygame.image.load("resources/images/ghost.png").convert_alpha()
     WIDTH = 32
     HEIGHT = 32
     SPEED = 2
@@ -25,6 +25,7 @@ class Enemy:
         self.x -= Enemy.SPEED
 
     def draw(self, gamescreen):
+        self.surface.fill(0)
         self.surface.blit(Enemy.IMAGE, (0, 0))
         gamescreen.blit(self.surface, (self.x, self.y))
 

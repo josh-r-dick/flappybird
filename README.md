@@ -5,6 +5,18 @@ A flappy bird clone written for the Code Enrichment program at NMS. It is a work
 Controls:
 * ```space```, ```p``` to pause, ```r``` to reset, ```q``` to quit, ```z``` to fire!
 
+## January 26, 2017
+
+Looked in to performance. Things that improved performance:
+
+- Adding convert() or convert_alpha() for generating images.
+- Removing extra pipe pieces required for up/down movement of pipes.
+- Removed fade in/out of background images.
+- Removed enemies.
+- Separated updated and drawing so they could be done in separate threads.
+
+The big difference came from removing items from the screen, it seems that screen.blit() is very inefficient.
+
 ## December 7, 2016
 
 Added ```q``` to quit the game and got it running on RetroPie.

@@ -10,8 +10,8 @@ November 23, 2016 Update:
 import pygame
 from pygame.locals import *
 from random import randint
-
-from Enemies import Enemy, Enemies
+import time
+import threading
 
 # Static game variables.
 FPS = 30
@@ -25,18 +25,21 @@ pygame.init()
 # Only allow certain events.
 pygame.event.set_allowed([QUIT, KEYDOWN, KEYUP])
 
-flags = DOUBLEBUF
-screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT), flags)
+# flags = DOUBLEBUF
+screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
 pygame.mouse.set_visible(False)
 
+from Enemies import Enemy, Enemies
+
+
 # Background image
-background_image = pygame.image.load("resources/images/background.png")
+background_image = pygame.image.load("resources/images/background.png").convert_alpha()
 # Paused image
-paused_image = pygame.image.load("resources/images/paused.png")
+paused_image = pygame.image.load("resources/images/paused.png").convert_alpha()
 # Game over image.
-game_over_image = pygame.image.load("resources/images/game_over.png")
+game_over_image = pygame.image.load("resources/images/game_over.png").convert_alpha()
 # Get Ready Image
-get_ready_image = pygame.image.load("resources/images/get_ready.png")
+get_ready_image = pygame.image.load("resources/images/get_ready.png").convert_alpha()
 
 # Clock to control the frame rate
 clock = pygame.time.Clock()
@@ -57,8 +60,8 @@ class Bird:
         self.width, self.height = 32, 32
 
         # The bird's image.
-        self.wing_up_image = pygame.image.load("resources/images/bird_wing_up.png")
-        self.wing_down_image = pygame.image.load("resources/images/bird_wing_down.png")
+        self.wing_up_image = pygame.image.load("resources/images/bird_wing_up.png").convert_alpha()
+        self.wing_down_image = pygame.image.load("resources/images/bird_wing_down.png").convert_alpha()
         self.wing_up = True
         self.image = self.wing_up_image
         self.surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
@@ -121,12 +124,13 @@ class Bird:
         :param gamescreen: The game screen.
         """
         self.score.draw(gamescreen)
+        self.surface.fill(0)
         self.surface.blit(self.image, (0, 0))
         gamescreen.blit(self.surface, (self.x, self.y))
         for f in self.fireballs:
             f.draw(gamescreen)
 
-    def crashed(self, p_list, enemies):
+    def crashed(self, p_list): #, enemies):
         """
         Check if the bird crashed in to the ground or a pipe in the pipes_list
 
@@ -139,7 +143,7 @@ class Bird:
             if p.collide(self):
                 return True
 
-        return enemies.collide(self.get_rect())
+        # return enemies.collide(self.get_rect())
 
     def get_rect(self):
         """
@@ -204,11 +208,13 @@ class Pipe:
     WIDTH = 80
 
     # Pipe Images
-    BODY_IMAGE = pygame.image.load("resources/images/pipe_body.png")
-    END_IMAGE = pygame.image.load("resources/images/pipe_end.png")
+    BODY_IMAGE = pygame.image.load("resources/images/pipe_body.png").convert_alpha()
+
+    END_IMAGE = pygame.image.load("resources/images/pipe_end.png").convert_alpha();
+
 
     # How many extra pieces to draw to accommodate for up/down movement
-    EXTRA_PIECES = 10
+    EXTRA_PIECES = 1
 
     def __init__(self, x, pieces, position):
         self.x = x
@@ -233,6 +239,7 @@ class Pipe:
         """
         Draw the Pipe.
         """
+        self.surface.fill(0)
         for i in range(0, self.pieces + Pipe.EXTRA_PIECES):
             self.surface.blit(Pipe.BODY_IMAGE, (0, i * Pipe.PIECE_HEIGHT))
 
@@ -302,7 +309,7 @@ class Pipes:
     MOVE_DOWN = 1
 
     # Start moving in the Y direction after this many pipes
-    START_MOVING_Y_COUNT = 2
+    START_MOVING_Y_COUNT = 200
 
     def __init__(self, gamescreen, number_of_pipes):
         """
@@ -508,7 +515,7 @@ class Fireball:
     """
     A Fireball the bird can launch.
     """
-    FIREBALL_IMAGE = pygame.image.load("resources/images/fireball.png")
+    FIREBALL_IMAGE = pygame.image.load("resources/images/fireball.png").convert_alpha()
     WIDTH = 50
     HEIGHT = 15
 
@@ -556,26 +563,61 @@ number_of_pipes = 0
 pipes_list = [Pipes(screen, number_of_pipes)]
 
 # The enemies.
-enemies = Enemies(screen)
+# enemies = Enemies(screen)
 
 game_counter = 0
 
+done = False
+game_over = False
 score = 0
 
-# Game loop flag
-done = False
 # Tracking pause and game over
 paused = False
-game_over = False
 started = False
 
 background.draw(screen)
 pygame.display.flip()
 
-"""
-The game loop.
-"""
-while not done:
+
+def draw():
+    # Draw everything
+    # Tick the clock, clear the screen and draw everything.
+    # clock.tick(FPS)
+    # screen.fill(0)
+    background.draw(screen)
+
+    # Draw all the pipes
+    for p in pipes_list:
+        p.draw(screen)
+
+    # Bird and score on top.
+    bird.draw(screen)
+    # enemies.draw()
+
+    # Update the bird and pipes if the game is not paused and not game over
+    if not started:
+        screen.blit(get_ready_image, (20, 100))
+
+    elif paused:
+        screen.blit(paused_image, (60, 200))
+
+    elif game_over:
+        screen.blit(game_over_image, (60, 200))
+
+    pygame.display.flip()
+
+    clock.tick(30)
+
+
+def update():
+
+    global game_over
+    global started
+    global pipes_list
+    global pipe_counter
+    global paused
+    global number_of_pipes
+    global done
 
     # Check for game events.
     for event in pygame.event.get():
@@ -602,33 +644,21 @@ while not done:
             pipes_list = [Pipes(screen, number_of_pipes)]
             paused = False
             game_over = False
-            enemies.reset()
+            # enemies.reset()
 
-    # Tick the clock, clear the screen and draw everything.
-    clock.tick(FPS)
-    screen.fill(0)
-    background.draw(screen)
-
-    # Draw all the pipes
-    for p in pipes_list:
-        p.draw(screen)
-
-    # Bird and score on top.
-    bird.draw(screen)
-    enemies.draw()
-
+    # Update everything
     # Update the bird and pipes if the game is not paused and not game over
     if not started:
-        screen.blit(get_ready_image, (20, 100))
         bird.flap()
     elif not paused and not game_over:
 
         bird.update()
-        enemies.update()
+        # enemies.update()
         background.update()
-        bird.killed_enemy(enemies)
+        # bird.killed_enemy(enemies)
 
         # Update each pipe, removing ones that are no longer visible.
+
         for p in pipes_list:
             p.update()
             if not p.is_visible():
@@ -644,18 +674,17 @@ while not done:
         # Update the score.
         bird.scored(pipes_list)
 
-    elif paused:
-        screen.blit(paused_image, (60, 200))
-
-    elif game_over:
-        screen.blit(game_over_image, (60, 200))
-
-    if bird.crashed(pipes_list, enemies):
+    if bird.crashed(pipes_list):  # , enemies):
         game_over = True
 
+    # clock.tick(30)
 
+"""
+The game loop.
+"""
 
-    pygame.display.flip()
-
-    game_counter += 1
+# Game loop flag
+while not done:
+    threading.Thread(target=draw()).start()
+    threading.Thread(target=update()).start()
 
