@@ -16,6 +16,7 @@ Looked in to performance. Things that improved performance:
 - Separated updated and drawing so they could be done in separate threads.
 
 The big difference came from removing items from the screen, it seems that screen.blit() is very inefficient.
+Apparently the GPU is not leveraged by default and libraries to use it properly need to be used.
 
 ## December 7, 2016
 

@@ -511,6 +511,7 @@ class Background:
             gamescreen.blit(self.night_background, (0, 0))
 
 
+
 class Fireball:
     """
     A Fireball the bird can launch.
