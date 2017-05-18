@@ -5,6 +5,10 @@ A flappy bird clone written for the Code Enrichment program at NMS. It is a work
 Controls:
 * ```space```, ```p``` to pause, ```r``` to reset, ```q``` to quit, ```z``` to fire!
 
+## May 18, 2017
+
+Added joystick support. The bird now flies if you push any button. The next step is to identify the buttons and assign them to 
+
 ## January 26, 2017
 
 Looked in to performance. Things that improved performance:
