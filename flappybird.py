@@ -22,8 +22,11 @@ SCREENHEIGHT = 512
 # Initialize the game.
 pygame.init()
 
+# Initiailze the joystick
+pygame.joystick.init()
+
 # Only allow certain events.
-pygame.event.set_allowed([QUIT, KEYDOWN, KEYUP])
+pygame.event.set_allowed([QUIT, KEYDOWN, KEYUP, pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP])
 
 # flags = DOUBLEBUF
 screen = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
@@ -579,6 +582,12 @@ started = False
 background.draw(screen)
 pygame.display.flip()
 
+# Initialize the joysticks.
+joystick_count = pygame.joystick.get_count()
+for i in range(joystick_count):
+    joystick = pygame.joystick.Joystick(i)
+    joystick.init()
+
 
 def draw():
     # Draw everything
@@ -620,8 +629,11 @@ def update():
     global number_of_pipes
     global done
 
+
+
     # Check for game events.
     for event in pygame.event.get():
+
 
         if event.type == pygame.QUIT:
             done = True
@@ -629,7 +641,7 @@ def update():
         elif event.type == pygame.KEYUP and event.key == pygame.K_q:
             done = True
         # Fly
-        elif event.type == pygame.KEYUP and event.key == pygame.K_SPACE:
+        elif event.type == pygame.KEYUP and event.key == pygame.K_SPACE or event.type == pygame.JOYBUTTONDOWN:
             started = True
             bird.climb()
         # Pause
@@ -646,6 +658,8 @@ def update():
             paused = False
             game_over = False
             # enemies.reset()
+
+        print(screen, "Number of joysticks: {}".format(joystick_count))
 
     # Update everything
     # Update the bird and pipes if the game is not paused and not game over
